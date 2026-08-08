@@ -292,23 +292,18 @@
   <div class="hint">날짜를 탭하면 산책 표시가 켜지고 꺼집니다. 오늘 이전 날짜는 나중에라도 수정할 수 있어요.</div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function () {
-  const STORAGE_KEY = "walkTracker.v1";
+  const SUPABASE_URL = "https://mugfsjrtbwtuyfvpgmef.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11Z2ZzanJ0Ynd0dXlmdnBnbWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMTU2NDIsImV4cCI6MjA4NzU5MTY0Mn0.hOBqey0Hs6aWNaCiNPL7nDd4KKndqrAsJH8OIEdyo3E";
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  function loadData() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch (e) {
-      return {};
-    }
-  }
-  function saveData(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }
+  const DEFAULT_START_DATE = "2026-05-25";
+  const DEFAULT_SLOGAN = "매일 5.5km · 6개월이면 몸이 기억한다";
 
-  let data = loadData(); // { "YYYY-MM-DD": true }
+  let data = {}; // { "YYYY-MM-DD": true }
+  let startDate = DEFAULT_START_DATE;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -327,32 +322,32 @@
   const overallPctLabel = document.getElementById("overallPctLabel");
   const overallDetailLabel = document.getElementById("overallDetailLabel");
   const overallFillBar = document.getElementById("overallFillBar");
-
-  const START_DATE_KEY = "walkTracker.startDate.v1";
-  const DEFAULT_START_DATE = "2026-05-25";
-
-  function loadStartDate() {
-    return localStorage.getItem(START_DATE_KEY) || DEFAULT_START_DATE;
-  }
-  function saveStartDate(value) {
-    localStorage.setItem(START_DATE_KEY, value);
-  }
-
-  let startDate = loadStartDate();
-  startDateInput.value = startDate;
-
-  const SLOGAN_KEY = "walkTracker.slogan.v1";
-  const DEFAULT_SLOGAN = "매일 5.5km · 6개월이면 몸이 기억한다";
   const sloganEl = document.getElementById("sloganText");
 
-  function loadSlogan() {
-    return localStorage.getItem(SLOGAN_KEY) || DEFAULT_SLOGAN;
-  }
-  function saveSlogan(value) {
-    localStorage.setItem(SLOGAN_KEY, value);
+  async function fetchWalkDays() {
+    const { data: rows, error } = await sb.from("walk_days").select("day");
+    if (error) {
+      console.error(error);
+      return {};
+    }
+    const obj = {};
+    for (const row of rows) obj[row.day] = true;
+    return obj;
   }
 
-  sloganEl.textContent = loadSlogan();
+  async function fetchSettings() {
+    const { data: rows, error } = await sb.from("app_settings").select("key,value");
+    const map = {};
+    if (!error) for (const row of rows) map[row.key] = row.value;
+    return map;
+  }
+
+  async function saveStartDate(value) {
+    await sb.from("app_settings").upsert({ key: "start_date", value });
+  }
+  async function saveSlogan(value) {
+    await sb.from("app_settings").upsert({ key: "slogan", value });
+  }
 
   sloganEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
@@ -424,14 +419,30 @@
     renderOverall();
   }
 
-  function toggleDay(dateStr) {
-    if (data[dateStr]) {
+  async function toggleDay(dateStr) {
+    const wasWalked = !!data[dateStr];
+
+    if (wasWalked) {
       delete data[dateStr];
     } else {
       data[dateStr] = true;
     }
-    saveData(data);
     render();
+
+    const { error } = wasWalked
+      ? await sb.from("walk_days").delete().eq("day", dateStr)
+      : await sb.from("walk_days").insert({ day: dateStr });
+
+    if (error) {
+      console.error(error);
+      if (wasWalked) {
+        data[dateStr] = true;
+      } else {
+        delete data[dateStr];
+      }
+      render();
+      alert("저장에 실패했어요. 네트워크를 확인하고 다시 시도해주세요.");
+    }
   }
 
   function renderStats() {
@@ -571,14 +582,23 @@
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
         const parsed = JSON.parse(reader.result);
-        if (parsed && typeof parsed === "object") {
-          data = parsed;
-          saveData(data);
-          render();
+        if (!parsed || typeof parsed !== "object") return;
+
+        const days = Object.keys(parsed).filter((k) => parsed[k]);
+        const rows = days.map((day) => ({ day }));
+        if (rows.length > 0) {
+          const { error } = await sb.from("walk_days").upsert(rows, { onConflict: "day" });
+          if (error) {
+            console.error(error);
+            alert("백업 가져오기에 실패했어요.");
+            return;
+          }
         }
+        data = await fetchWalkDays();
+        render();
       } catch (err) {
         alert("백업 파일을 읽을 수 없어요.");
       }
@@ -587,7 +607,38 @@
     importFile.value = "";
   });
 
-  render();
+  function subscribeRealtime() {
+    sb.channel("walk_days_changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "walk_days" }, async () => {
+        data = await fetchWalkDays();
+        render();
+      })
+      .subscribe();
+
+    sb.channel("app_settings_changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "app_settings" }, async () => {
+        const settings = await fetchSettings();
+        if (settings.start_date && settings.start_date !== startDate) {
+          startDate = settings.start_date;
+          startDateInput.value = startDate;
+        }
+        if (settings.slogan && settings.slogan !== sloganEl.textContent) {
+          sloganEl.textContent = settings.slogan;
+        }
+        render();
+      })
+      .subscribe();
+  }
+
+  (async function init() {
+    const [walkDays, settings] = await Promise.all([fetchWalkDays(), fetchSettings()]);
+    data = walkDays;
+    startDate = settings.start_date || DEFAULT_START_DATE;
+    startDateInput.value = startDate;
+    sloganEl.textContent = settings.slogan || DEFAULT_SLOGAN;
+    render();
+    subscribeRealtime();
+  })();
 })();
 </script>
 </body>
