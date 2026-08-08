@@ -296,7 +296,7 @@
   </div>
   <input type="file" id="importFile" accept="application/json">
 
-  <div class="hint">날짜를 탭하면 산책 표시가 켜지고 꺼집니다. 오늘 이전 날짜는 나중에라도 수정할 수 있어요.</div>
+  <div class="hint">날짜를 두 번 탭(더블탭)하면 산책 표시가 켜지고 꺼집니다. 실수로 지워지지 않도록 한 번 탭으로는 바뀌지 않아요. 오늘 이전 날짜는 나중에라도 수정할 수 있어요.</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -415,7 +415,7 @@
       }
 
       if (!future) {
-        btn.addEventListener("click", () => toggleDay(dateStr));
+        btn.addEventListener("dblclick", () => toggleDay(dateStr));
       }
 
       cell.appendChild(btn);
