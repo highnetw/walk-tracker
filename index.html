@@ -193,6 +193,34 @@
     line-height: 1.5;
   }
   input[type="file"] { display: none; }
+  .overall-card {
+    margin-top: 14px;
+  }
+  .overall-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .overall-head .title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--sub);
+  }
+  .overall-head .start-date {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--sub);
+  }
+  .overall-head input[type="date"] {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px 6px;
+    font-size: 12px;
+    color: var(--ink);
+    background: var(--bg);
+  }
 </style>
 </head>
 <body>
@@ -230,6 +258,21 @@
         <div class="num" id="streakBest">0</div>
         <div class="lbl">최장 연속(일)</div>
       </div>
+    </div>
+  </div>
+
+  <div class="card overall-card">
+    <div class="overall-head">
+      <div class="title">전체 누적</div>
+      <div class="start-date">
+        시작일
+        <input type="date" id="startDateInput">
+      </div>
+    </div>
+    <div class="stats">
+      <div class="pct" id="overallPctLabel">0%</div>
+      <div class="detail" id="overallDetailLabel">0일 / 0일</div>
+      <div class="bar"><div class="fill" id="overallFillBar" style="width:0%"></div></div>
     </div>
   </div>
 
@@ -273,6 +316,23 @@
   const fillBar = document.getElementById("fillBar");
   const streakNowEl = document.getElementById("streakNow");
   const streakBestEl = document.getElementById("streakBest");
+  const startDateInput = document.getElementById("startDateInput");
+  const overallPctLabel = document.getElementById("overallPctLabel");
+  const overallDetailLabel = document.getElementById("overallDetailLabel");
+  const overallFillBar = document.getElementById("overallFillBar");
+
+  const START_DATE_KEY = "walkTracker.startDate.v1";
+  const DEFAULT_START_DATE = "2026-05-25";
+
+  function loadStartDate() {
+    return localStorage.getItem(START_DATE_KEY) || DEFAULT_START_DATE;
+  }
+  function saveStartDate(value) {
+    localStorage.setItem(START_DATE_KEY, value);
+  }
+
+  let startDate = loadStartDate();
+  startDateInput.value = startDate;
 
   function fmt(y, m, d) {
     return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
@@ -329,6 +389,7 @@
     }
 
     renderStats();
+    renderOverall();
   }
 
   function toggleDay(dateStr) {
@@ -407,6 +468,40 @@
     }
     streakNowEl.textContent = String(current);
   }
+
+  function renderOverall() {
+    const [sy, sm, sd] = startDate.split("-").map(Number);
+    const start = new Date(sy, sm - 1, sd);
+    start.setHours(0, 0, 0, 0);
+
+    if (start > today) {
+      overallPctLabel.textContent = "0%";
+      overallDetailLabel.textContent = "시작일이 아직 오지 않았어요";
+      overallFillBar.style.width = "0%";
+      return;
+    }
+
+    const totalDays = Math.round((today - start) / 86400000) + 1;
+    let walked = 0;
+    const cursor = new Date(start);
+    for (let i = 0; i < totalDays; i++) {
+      const key = fmt(cursor.getFullYear(), cursor.getMonth(), cursor.getDate());
+      if (data[key]) walked++;
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    const pct = totalDays > 0 ? Math.round((walked / totalDays) * 100) : 0;
+    overallPctLabel.textContent = `${pct}%`;
+    overallDetailLabel.textContent = `${walked}일 / ${totalDays}일`;
+    overallFillBar.style.width = `${pct}%`;
+  }
+
+  startDateInput.addEventListener("change", () => {
+    if (!startDateInput.value) return;
+    startDate = startDateInput.value;
+    saveStartDate(startDate);
+    renderOverall();
+  });
 
   document.getElementById("prevBtn").addEventListener("click", () => {
     viewMonth--;
