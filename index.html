@@ -43,6 +43,13 @@
   header.top .sub {
     font-size: 12px;
     color: var(--sub);
+    outline: none;
+    border-bottom: 1px dashed transparent;
+    cursor: text;
+  }
+  header.top .sub:hover,
+  header.top .sub:focus {
+    border-bottom-color: var(--sub);
   }
   .card {
     background: var(--card);
@@ -228,7 +235,7 @@
   <header class="top">
     <div>
       <h1>🌲 새벽 숲길 산책</h1>
-      <div class="sub">매일 5.5km · 6개월이면 몸이 기억한다</div>
+      <div class="sub" id="sloganText" contenteditable="true" spellcheck="false" translate="no">매일 5.5km · 6개월이면 몸이 기억한다</div>
     </div>
   </header>
 
@@ -333,6 +340,31 @@
 
   let startDate = loadStartDate();
   startDateInput.value = startDate;
+
+  const SLOGAN_KEY = "walkTracker.slogan.v1";
+  const DEFAULT_SLOGAN = "매일 5.5km · 6개월이면 몸이 기억한다";
+  const sloganEl = document.getElementById("sloganText");
+
+  function loadSlogan() {
+    return localStorage.getItem(SLOGAN_KEY) || DEFAULT_SLOGAN;
+  }
+  function saveSlogan(value) {
+    localStorage.setItem(SLOGAN_KEY, value);
+  }
+
+  sloganEl.textContent = loadSlogan();
+
+  sloganEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      sloganEl.blur();
+    }
+  });
+  sloganEl.addEventListener("blur", () => {
+    const value = sloganEl.textContent.trim() || DEFAULT_SLOGAN;
+    sloganEl.textContent = value;
+    saveSlogan(value);
+  });
 
   function fmt(y, m, d) {
     return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
