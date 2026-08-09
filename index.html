@@ -553,23 +553,57 @@
     renderOverall();
   });
 
-  document.getElementById("prevBtn").addEventListener("click", () => {
+  function goToPrevMonth() {
     viewMonth--;
     if (viewMonth < 0) {
       viewMonth = 11;
       viewYear--;
     }
     render();
-  });
+  }
 
-  document.getElementById("nextBtn").addEventListener("click", () => {
+  function goToNextMonth() {
     viewMonth++;
     if (viewMonth > 11) {
       viewMonth = 0;
       viewYear++;
     }
     render();
-  });
+  }
+
+  document.getElementById("prevBtn").addEventListener("click", goToPrevMonth);
+  document.getElementById("nextBtn").addEventListener("click", goToNextMonth);
+
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchStartTime = 0;
+  const SWIPE_MIN_DISTANCE = 50;
+  const SWIPE_MAX_OFF_AXIS = 60;
+  const SWIPE_MAX_TIME = 600;
+
+  daysGrid.addEventListener("touchstart", (e) => {
+    const t = e.changedTouches[0];
+    touchStartX = t.clientX;
+    touchStartY = t.clientY;
+    touchStartTime = Date.now();
+  }, { passive: true });
+
+  daysGrid.addEventListener("touchend", (e) => {
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStartX;
+    const dy = t.clientY - touchStartY;
+    const dt = Date.now() - touchStartTime;
+
+    if (dt > SWIPE_MAX_TIME) return;
+    if (Math.abs(dx) < SWIPE_MIN_DISTANCE) return;
+    if (Math.abs(dy) > SWIPE_MAX_OFF_AXIS) return;
+
+    if (dx < 0) {
+      goToNextMonth();
+    } else {
+      goToPrevMonth();
+    }
+  }, { passive: true });
 
   document.getElementById("exportBtn").addEventListener("click", () => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
