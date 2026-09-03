@@ -298,7 +298,7 @@
 <div class="lock-overlay" id="lockOverlay">
   <div class="lock-box">
     <div class="lock-title">🔒 비밀번호</div>
-    <input type="password" id="lockInput" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="••••">
+    <input type="password" id="lockInput" inputmode="numeric" pattern="[0-9]*" maxlength="2" autocomplete="off" placeholder="••">
     <button id="lockSubmit">확인</button>
     <div class="lock-error" id="lockError"></div>
   </div>
@@ -367,7 +367,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function () {
-  const PIN_CODE = "5522";
+  const PIN_CODE = "55";
   const lockOverlay = document.getElementById("lockOverlay");
   const lockInput = document.getElementById("lockInput");
   const lockSubmit = document.getElementById("lockSubmit");
