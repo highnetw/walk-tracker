@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+&lt;!DOCTYPE html&gt;
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -21,6 +21,8 @@
     --accent-soft: #e4efe8;
     --border: #e7e3da;
     --today-ring: #c98a3b;
+    --cat1: #3a6b52;
+    --cat2: #3b6fe0;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
@@ -123,9 +125,25 @@
     cursor: default;
   }
   .day-btn.walked {
-    background: var(--accent);
     color: #fff;
     font-weight: 700;
+  }
+  .day-btn.walked.cat-1 {
+    background: var(--cat1);
+  }
+  .day-btn.walked.cat-2 {
+    background: var(--cat2);
+  }
+  .day-note-dot {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #fff;
+    border: 1px solid var(--ink);
+    z-index: 3;
   }
   .day-btn.today::after {
     content: "";
@@ -184,6 +202,28 @@
     color: var(--sub);
     margin-top: 2px;
   }
+  .legend {
+    display: flex;
+    gap: 14px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--ink);
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .legend .swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .legend .swatch.cat-1 { background: var(--cat1); }
+  .legend .swatch.cat-2 { background: var(--cat2); }
   .footer-actions {
     display: flex;
     gap: 10px;
@@ -264,6 +304,113 @@
     color: #e0554f;
     min-height: 14px;
   }
+  .picker-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 900;
+  }
+  .picker-overlay.open {
+    display: flex;
+  }
+  .picker-sheet {
+    background: var(--card);
+    border-radius: 20px 20px 0 0;
+    padding: 20px 18px 24px;
+    width: 100%;
+    max-width: 420px;
+    box-sizing: border-box;
+  }
+  .picker-date {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 14px;
+    text-align: center;
+  }
+  .picker-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .picker-opt {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    font-size: 14px;
+    color: var(--ink);
+    cursor: pointer;
+    position: relative;
+  }
+  .picker-opt.checked {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    font-weight: 700;
+  }
+  .picker-opt .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .picker-opt .check {
+    margin-left: auto;
+    opacity: 0;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .picker-opt.checked .check {
+    opacity: 1;
+  }
+  .picker-note {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 13px;
+    margin-bottom: 12px;
+    outline: none;
+  }
+  .picker-note:focus {
+    border-color: var(--accent);
+  }
+  .picker-confirm {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    margin-bottom: 8px;
+  }
+  .picker-clear, .picker-cancel {
+    width: 100%;
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--sub);
+    font-size: 13px;
+    cursor: pointer;
+    margin-bottom: 8px;
+  }
+  .picker-cancel {
+    margin-bottom: 0;
+  }
   .overall-card {
     margin-top: 14px;
   }
@@ -322,6 +469,11 @@
     </div>
     <div class="days" id="daysGrid"></div>
 
+    <div class="legend">
+      <div class="legend-item"><span class="swatch cat-1"></span>동정뜰</div>
+      <div class="legend-item"><span class="swatch cat-2"></span>기타코스</div>
+    </div>
+
     <div class="stats">
       <div class="pct" id="pctLabel">0%</div>
       <div class="detail" id="detailLabel">0일 / 0일</div>
@@ -361,7 +513,25 @@
   </div>
   <input type="file" id="importFile" accept="application/json">
 
-  <div class="hint">날짜를 두 번 탭(더블탭)하면 산책 표시가 켜지고 꺼집니다. 실수로 지워지지 않도록 한 번 탭으로는 바뀌지 않아요. 오늘 이전 날짜는 나중에라도 수정할 수 있어요.</div>
+  <div class="hint">날짜를 두 번 탭(더블탭)하면 산책 코스를 고르는 창이 떠요. 메모도 남길 수 있고, 메모가 있는 날은 작은 점으로 표시돼요. 오늘 이전 날짜는 나중에라도 수정할 수 있어요.</div>
+</div>
+
+<div class="picker-overlay" id="pickerOverlay">
+  <div class="picker-sheet">
+    <div class="picker-date" id="pickerDate"></div>
+    <div class="picker-options">
+      <button class="picker-opt" data-cat="1">
+        <span class="swatch cat-1"></span>동정뜰<span class="check">✓</span>
+      </button>
+      <button class="picker-opt" data-cat="2">
+        <span class="swatch cat-2"></span>기타코스<span class="check">✓</span>
+      </button>
+    </div>
+    <input type="text" class="picker-note" id="pickerNote" maxlength="30" placeholder="메모 (선택)">
+    <button class="picker-confirm" id="pickerConfirm">확인</button>
+    <button class="picker-clear" id="pickerClear">표시 지우기</button>
+    <button class="picker-cancel" id="pickerCancel">취소</button>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -396,8 +566,11 @@
   const DEFAULT_START_DATE = "2026-05-25";
   const DEFAULT_SLOGAN = "매일 5.5km · 6개월이면 몸이 기억한다";
 
-  let data = {}; // { "YYYY-MM-DD": true }
+  let data = {}; // { "YYYY-MM-DD": categoryNumber }
+  let notes = {}; // { "YYYY-MM-DD": "memo text" }
   let startDate = DEFAULT_START_DATE;
+  let pendingDateStr = null;
+  let selectedCat = null;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -417,16 +590,59 @@
   const overallDetailLabel = document.getElementById("overallDetailLabel");
   const overallFillBar = document.getElementById("overallFillBar");
   const sloganEl = document.getElementById("sloganText");
+  const pickerOverlay = document.getElementById("pickerOverlay");
+  const pickerDate = document.getElementById("pickerDate");
+  const pickerNote = document.getElementById("pickerNote");
+  const pickerConfirm = document.getElementById("pickerConfirm");
+  const pickerClear = document.getElementById("pickerClear");
+  const pickerCancel = document.getElementById("pickerCancel");
+  const pickerOptEls = Array.from(document.querySelectorAll(".picker-opt"));
 
   async function fetchWalkDays() {
-    const { data: rows, error } = await sb.from("walk_days").select("day");
+    const { data: rows, error } = await sb.from("walk_days").select("day,category");
     if (error) {
       console.error(error);
       return {};
     }
     const obj = {};
-    for (const row of rows) obj[row.day] = true;
+    for (const row of rows) obj[row.day] = row.category;
     return obj;
+  }
+
+  async function fetchNotes() {
+    const { data: rows, error } = await sb.from("walk_notes").select("day,note");
+    if (error) {
+      console.error(error);
+      return {};
+    }
+    const obj = {};
+    for (const row of rows) if (row.note) obj[row.day] = row.note;
+    return obj;
+  }
+
+  async function saveNote(dateStr, text) {
+    const trimmed = (text || "").trim();
+    const prev = notes[dateStr];
+    if (trimmed) {
+      notes[dateStr] = trimmed;
+    } else {
+      delete notes[dateStr];
+    }
+    render();
+
+    const { error } = trimmed
+      ? await sb.from("walk_notes").upsert({ day: dateStr, note: trimmed })
+      : await sb.from("walk_notes").delete().eq("day", dateStr);
+
+    if (error) {
+      console.error(error);
+      if (prev) {
+        notes[dateStr] = prev;
+      } else {
+        delete notes[dateStr];
+      }
+      render();
+    }
   }
 
   async function fetchSettings() {
@@ -496,13 +712,20 @@
 
       if (future) btn.classList.add("future");
       if (isSameDay(viewYear, viewMonth, d, today)) btn.classList.add("today");
-      if (data[dateStr]) {
-        btn.classList.add("walked");
+      const category = data[dateStr];
+      if (category) {
+        btn.classList.add("walked", `cat-${category}`);
         btn.textContent = "";
       }
 
+      if (notes[dateStr]) {
+        const noteDot = document.createElement("div");
+        noteDot.className = "day-note-dot";
+        btn.appendChild(noteDot);
+      }
+
       if (!future) {
-        btn.addEventListener("dblclick", () => toggleDay(dateStr));
+        btn.addEventListener("dblclick", () => openPicker(dateStr));
       }
 
       cell.appendChild(btn);
@@ -513,24 +736,25 @@
     renderOverall();
   }
 
-  async function toggleDay(dateStr) {
-    const wasWalked = !!data[dateStr];
+  async function applyDay(dateStr, category) {
+    const prevCategory = data[dateStr] || null;
+    if (category === prevCategory) return;
 
-    if (wasWalked) {
-      delete data[dateStr];
+    if (category) {
+      data[dateStr] = category;
     } else {
-      data[dateStr] = true;
+      delete data[dateStr];
     }
     render();
 
-    const { error } = wasWalked
-      ? await sb.from("walk_days").delete().eq("day", dateStr)
-      : await sb.from("walk_days").insert({ day: dateStr });
+    const { error } = category
+      ? await sb.from("walk_days").upsert({ day: dateStr, category })
+      : await sb.from("walk_days").delete().eq("day", dateStr);
 
     if (error) {
       console.error(error);
-      if (wasWalked) {
-        data[dateStr] = true;
+      if (prevCategory) {
+        data[dateStr] = prevCategory;
       } else {
         delete data[dateStr];
       }
@@ -538,6 +762,62 @@
       alert("저장에 실패했어요. 네트워크를 확인하고 다시 시도해주세요.");
     }
   }
+
+  function openPicker(dateStr) {
+    pendingDateStr = dateStr;
+    selectedCat = data[dateStr] || null;
+    const [y, m, d] = dateStr.split("-").map(Number);
+    pickerDate.textContent = `${y}년 ${m}월 ${d}일`;
+    pickerNote.value = notes[dateStr] || "";
+    updatePickerUI();
+    pickerOverlay.classList.add("open");
+  }
+
+  function closePicker() {
+    pickerOverlay.classList.remove("open");
+    pendingDateStr = null;
+    selectedCat = null;
+  }
+
+  function updatePickerUI() {
+    pickerOptEls.forEach((btn) => {
+      const cat = Number(btn.dataset.cat);
+      btn.classList.toggle("checked", selectedCat === cat);
+    });
+  }
+
+  pickerOptEls.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const cat = Number(btn.dataset.cat);
+      selectedCat = selectedCat === cat ? null : cat;
+      updatePickerUI();
+    });
+  });
+
+  pickerConfirm.addEventListener("click", () => {
+    if (pendingDateStr) {
+      const dateStr = pendingDateStr;
+      const cat = selectedCat;
+      const noteText = pickerNote.value;
+      applyDay(dateStr, cat);
+      saveNote(dateStr, noteText);
+    }
+    closePicker();
+  });
+
+  pickerClear.addEventListener("click", () => {
+    if (pendingDateStr) {
+      const dateStr = pendingDateStr;
+      applyDay(dateStr, null);
+      saveNote(dateStr, "");
+    }
+    closePicker();
+  });
+
+  pickerCancel.addEventListener("click", closePicker);
+  pickerOverlay.addEventListener("click", (e) => {
+    if (e.target === pickerOverlay) closePicker();
+  });
 
   function renderStats() {
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
@@ -715,8 +995,12 @@
         const parsed = JSON.parse(reader.result);
         if (!parsed || typeof parsed !== "object") return;
 
-        const days = Object.keys(parsed).filter((k) => parsed[k]);
-        const rows = days.map((day) => ({ day }));
+        const rows = [];
+        for (const day of Object.keys(parsed)) {
+          const val = parsed[day];
+          if (!val) continue;
+          rows.push({ day, category: typeof val === "number" ? val : 1 });
+        }
         if (rows.length > 0) {
           const { error } = await sb.from("walk_days").upsert(rows, { onConflict: "day" });
           if (error) {
@@ -743,6 +1027,13 @@
       })
       .subscribe();
 
+    sb.channel("walk_notes_changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "walk_notes" }, async () => {
+        notes = await fetchNotes();
+        render();
+      })
+      .subscribe();
+
     sb.channel("app_settings_changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "app_settings" }, async () => {
         const settings = await fetchSettings();
@@ -759,8 +1050,9 @@
   }
 
   (async function init() {
-    const [walkDays, settings] = await Promise.all([fetchWalkDays(), fetchSettings()]);
+    const [walkDays, settings, walkNotes] = await Promise.all([fetchWalkDays(), fetchSettings(), fetchNotes()]);
     data = walkDays;
+    notes = walkNotes;
     startDate = settings.start_date || DEFAULT_START_DATE;
     startDateInput.value = startDate;
     sloganEl.textContent = settings.slogan || DEFAULT_SLOGAN;
